@@ -11,6 +11,7 @@ import (
 
 // TODO: use os.Args[1:] or, better yet, flags
 var courseUrl = "https://egghead.io/courses/wrangle-your-terminal-with-tmux"
+var serviceMu sync.Mutex
 
 func getDocFromUrl(url string) *html.Node {
 	response, err := http.Get(url)
@@ -115,6 +116,9 @@ func main() {
 
 			fileRef := getFileRef(url)
 			//fmt.Println(fileRef)
+
+			serviceMu.Lock()
+			defer serviceMu.Unlock()
 			fileRefs = append(fileRefs, fileRef)
 		}(lesson)
 	}
