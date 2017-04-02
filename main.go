@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"golang.org/x/net/html"
 	"strings"
+	"sync"
 )
 
-// TODO: pass this as a command-line argument
+// TODO: use os.Args[1:] or, better yet, flags
 var courseUrl = "https://egghead.io/courses/wrangle-your-terminal-with-tmux"
 
 func getDocFromUrl(url string) *html.Node {
@@ -88,6 +89,7 @@ func getLessons(url string) []string {
 	return lessons
 }
 
+// TODO: Check with https://golang.org/doc/articles/race_detector.html
 func main() {
 	// This piece is useful to display the entire html.
 	//body, err := ioutil.ReadAll(response.Body)
@@ -98,11 +100,29 @@ func main() {
 	//res := string(body)
 	//fmt.Println(res)
 
-	lessons := getLessons(courseUrl)
-	fmt.Println(lessons[0])
+	fileRefs := []string{}
 
-	fileRef := getFileRef(lessons[0])
-	fmt.Println(fileRef)
+	lessons := getLessons(courseUrl)
+	//fmt.Println(lessons[0])
+
+	var wg sync.WaitGroup
+
+	for _, lesson := range lessons {
+		wg.Add(1)
+		go func(url string) {
+			// Decrement the counter when the goroutine completes.
+			defer wg.Done()
+
+			fileRef := getFileRef(url)
+			//fmt.Println(fileRef)
+			fileRefs = append(fileRefs, fileRef)
+		}(lesson)
+	}
+	wg.Wait()
+
+	fmt.Println(fileRefs)
+	fmt.Println(len(fileRefs))
+
 	//res := fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", fileRef)
 	//fmt.Println(res)
 }
