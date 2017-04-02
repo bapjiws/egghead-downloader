@@ -5,6 +5,7 @@ import (
 	//"io/ioutil"
 	"fmt"
 	"golang.org/x/net/html"
+	"strings"
 )
 
 var testUrl = "https://egghead.io/lessons/tools-share-a-tmux-session-for-pair-programming-with-ssh"
@@ -40,7 +41,9 @@ func getFileRef(n *html.Node) string {
 		}
 	}
 	f(n)
-	return fileRef
+
+	// Substitute ".bin" with "/file.mp4"
+	return strings.Replace(fileRef,".bin", "/file.mp4", 1)
 }
 
 func main() {
@@ -64,7 +67,7 @@ func main() {
 	}
 
 	fileRef := getFileRef(doc)
-	fmt.Println(fileRef) // TODO: substitute ".bin" with "/file.mp4"
-	res := fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", fileRef)
-	fmt.Println(res)
+	fmt.Println(fileRef)
+	//res := fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", fileRef)
+	//fmt.Println(res)
 }
