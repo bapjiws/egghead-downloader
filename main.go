@@ -8,13 +8,10 @@ import (
 	"strings"
 )
 
-//var lessonUrl = "https://egghead.io/lessons/tools-share-a-tmux-session-for-pair-programming-with-ssh"
+// TODO: pass this as a command-line argument
 var courseUrl = "https://egghead.io/courses/wrangle-your-terminal-with-tmux"
 
-func getFileRef(url string) string {
-	var nodeFound bool
-	var fileRef string
-
+func getDocFromUrl(url string) *html.Node {
 	response, err := http.Get(url)
 	if err != nil {
 		panic(err)
@@ -25,6 +22,14 @@ func getFileRef(url string) string {
 	if err != nil {
 		panic(err)
 	}
+
+	return doc
+}
+
+func getFileRef(url string) string {
+	var nodeFound bool
+	var fileRef string
+	doc := getDocFromUrl(url)
 
 	var f func(n *html.Node)
 	f = func(n *html.Node) {
@@ -60,17 +65,7 @@ func getFileRef(url string) string {
 
 func getLessons(url string) []string {
 	var lessons []string
-
-	response, err := http.Get(url)
-	if err != nil {
-		panic(err)
-	}
-	defer response.Body.Close()
-
-	doc, err := html.Parse(response.Body)
-	if err != nil {
-		panic(err)
-	}
+	doc := getDocFromUrl(url)
 
 	var f func(n *html.Node)
 	f = func(n *html.Node) {
