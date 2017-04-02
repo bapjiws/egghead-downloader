@@ -7,6 +7,7 @@ import (
 	"golang.org/x/net/html"
 	"strings"
 	"sync"
+	//"regexp"
 )
 
 // TODO: use os.Args[1:] or, better yet, flags
@@ -101,7 +102,7 @@ func main() {
 	//res := string(body)
 	//fmt.Println(res)
 
-	fileRefs := []string{}
+	fileRefs := map[string]string{}
 
 	lessons := getLessons(courseUrl)
 	//fmt.Println(lessons[0])
@@ -117,9 +118,24 @@ func main() {
 			fileRef := getFileRef(url)
 			//fmt.Println(fileRef)
 
+			// See https://golang.org/pkg/regexp/syntax/
+			//re := regexp.MustCompile(`http://embed.wistia.com/deliveries/(?P<fileId>[\d\w]*)/file.mp4`)
+			//fileId := re.FindStringSubmatch(fileRef)[1]
+			// [http://embed.wistia.com/deliveries/b94db68f0d0edbf0ba1568721638473c02df2976/file.mp4 b94db68f0d0edbf0ba1568721638473c02df2976]
+			//fmt.Println(fileId)
+
+			fileId := strings.TrimLeft(fileRef, "http://embed.wistia.com/deliveries/")
+			fileId = strings.TrimRight(fileId, "/file.mp4")
+			//fmt.Println(fileId)
+
 			serviceMu.Lock()
 			defer serviceMu.Unlock()
-			fileRefs = append(fileRefs, fileRef)
+			if _, ok := fileRefs[fileId]; !ok {
+				fileRefs[fileId] = fileRef
+			}
+
+
+			//fileRefs = append(fileRefs, fileRef)
 		}(lesson)
 	}
 	wg.Wait()
