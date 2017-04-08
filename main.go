@@ -30,9 +30,9 @@ func getDocFromUrl(url string) *html.Node {
 	return doc
 }
 
-func getFileRef(url string) string {
+func getFileUrl(url string) string {
 	var nodeFound bool
-	var fileRef string
+	var fileUrl string
 	doc := getDocFromUrl(url)
 
 	var f func(n *html.Node)
@@ -49,7 +49,7 @@ func getFileRef(url string) string {
 					for _, a := range n.Attr {
 						if a.Key == "content" {
 							//fmt.Println(a)
-							fileRef = a.Val
+							fileUrl = a.Val
 							return
 						}
 					}
@@ -65,7 +65,7 @@ func getFileRef(url string) string {
 	}
 	f(doc)
 
-	return strings.Replace(fileRef, ".bin", "/file.mp4", 1)
+	return strings.Replace(fileUrl, ".bin", "/file.mp4", 1)
 }
 
 func getLessons(url string) []string {
@@ -104,8 +104,8 @@ func main() {
 	//res := string(body)
 	//fmt.Println(res)
 
-	// TODO: create a struct to store url and lesson name.
-	fileRefs := map[string]string{}
+	// TODO: create a struct to store url and lesson name (span class="checklist__lessons--title").
+	fileUrls := map[string]string{}
 
 	lessons := getLessons(courseUrl)
 
@@ -116,36 +116,36 @@ func main() {
 		go func(url string) {
 			defer wg.Done()
 
-			fileRef := getFileRef(url)
+			fileUrl := getFileUrl(url)
 
-			fileId := strings.TrimLeft(fileRef, "http://embed.wistia.com/deliveries/")
+			fileId := strings.TrimLeft(fileUrl, "http://embed.wistia.com/deliveries/")
 			fileId = strings.TrimRight(fileId, "/file.mp4")
 
 			serviceMu.Lock()
 			defer serviceMu.Unlock()
-			if _, ok := fileRefs[fileId]; !ok {
-				fileRefs[fileId] = fileRef
+			if _, ok := fileUrls[fileId]; !ok {
+				fileUrls[fileId] = fileUrl
 
 				wg.Add(1)
 				go func(url string) {
 					defer wg.Done()
 
-					fmt.Printf("Downloading file from %s\n", fileRef)
+					fmt.Printf("Downloading file from %s\n", fileUrl)
 					out, _ := os.Create(fmt.Sprintf("%s.mp4", fileId))
 					defer out.Close()
 
 					/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
-					An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", fileRef)*/
-					resp, _ := http.Get(fileRef)
+					An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", fileUrl)*/
+					resp, _ := http.Get(fileUrl)
 					defer resp.Body.Close()
 
 					n, _ := io.Copy(out, resp.Body)
 					fmt.Printf("Bytes copied: %d\n", n)
-				}(fileRef)
+				}(fileUrl)
 			}
 		}(lesson)
 	}
 	wg.Wait()
 
-	fmt.Printf("Total lessons downloaded: %d\n", len(fileRefs))
+	fmt.Printf("Total lessons downloaded: %d\n", len(fileUrls))
 }
