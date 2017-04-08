@@ -13,7 +13,6 @@ import (
 
 // TODO: use os.Args[1:] or, better yet, flags
 var courseUrl = "https://egghead.io/courses/learn-the-best-and-most-useful-scss"
-var serviceMu sync.Mutex
 
 func getDocFromUrl(url string) *html.Node {
 	response, err := http.Get(url)
@@ -120,17 +119,19 @@ func getFileName(doc *html.Node) string { // url string
 	return fileName
 }
 
-func getLessonUrls(url string) []string {
-	var lessonUrls []string
-	doc := getDocFromUrl(url)
+func getLessonUrls(courseUrl string) []string {
+	lessonIds := map[string]bool{}
+	lessonUrls := []string{}
+	doc := getDocFromUrl(courseUrl)
 
 	var f func(n *html.Node)
 	f = func(n *html.Node) {
 		if n.Type == html.ElementNode && n.Data == "a" {
 			//fmt.Println(n)
 			for _, a := range n.Attr {
-				if a.Key == "href" && strings.Index(a.Val, "https://egghead.io/lessons/") != -1 {
+				if a.Key == "href" && strings.Index(a.Val, "https://egghead.io/lessons/") != -1 && !lessonIds[a.Val]{
 					//fmt.Println(a)
+					lessonIds[a.Val] = true
 					lessonUrls = append(lessonUrls, a.Val)
 				}
 
@@ -161,11 +162,8 @@ func main() {
 	//res := string(body)
 	//fmt.Println(res)
 
-	// TODO: create a struct to store url and lessonUrl name (h1 class="title").
-	files := map[string]file{}
-
 	lessonUrls := getLessonUrls(courseUrl)
-	fmt.Println(lessonUrls)
+	fmt.Println(len(lessonUrls))
 
 	var wg sync.WaitGroup
 
@@ -181,31 +179,27 @@ func main() {
 			fileId := strings.TrimLeft(file.url, "http://embed.wistia.com/deliveries/")
 			fileId = strings.TrimRight(fileId, "/file.mp4")
 
-			serviceMu.Lock()
-			defer serviceMu.Unlock()
-			if _, ok := files[fileId]; !ok {
-				files[fileId] = file
+			fmt.Println(fileId)
 
-				//wg.Add(1)
-				//go func(url string) {
-				//	defer wg.Done()
-				//
-				//	fmt.Printf("Downloading file from %s\n", url)
-				//	out, _ := os.Create(fmt.Sprintf("%s.mp4", fileId))
-				//	defer out.Close()
-				//
-				//	/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
-				//	An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", url)*/
-				//	resp, _ := http.Get(url)
-				//	defer resp.Body.Close()
-				//
-				//	n, _ := io.Copy(out, resp.Body)
-				//	fmt.Printf("Bytes copied: %d\n", n)
-				//}(url)
-			}
+			//wg.Add(1)
+			//go func(url string) {
+			//	defer wg.Done()
+			//
+			//	fmt.Printf("Downloading file from %s\n", url)
+			//	out, _ := os.Create(fmt.Sprintf("%s.mp4", fileId))
+			//	defer out.Close()
+			//
+			//	/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
+			//	An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", url)*/
+			//	resp, _ := http.Get(url)
+			//	defer resp.Body.Close()
+			//
+			//	n, _ := io.Copy(out, resp.Body)
+			//	fmt.Printf("Bytes copied: %d\n", n)
+			//}(url)
 		}(lessonUrl)
 	}
 	wg.Wait()
 
-	fmt.Printf("Total lessonUrls downloaded: %d\n", len(files))
+	//fmt.Printf("Total lessonUrls downloaded: %d\n", len(files))
 }
