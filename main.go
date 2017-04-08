@@ -43,25 +43,20 @@ func getFile(url string) file {
 func getFileUrl(doc *html.Node) string { // url string
 	nodeFound := false
 	fileUrl := ""
-	//file := file{}
-	//doc := getDocFromUrl(url)
 
 	var f func(n *html.Node)
 	f = func(n *html.Node) {
 		if n.Type == html.ElementNode && n.Data == "meta" {
-			//fmt.Println(n)
 			for _, a := range n.Attr {
 				if a.Key == "itemprop" && a.Val == "contentURL" {
 					//fmt.Println(a)
 					//fmt.Println(n)
-					nodeFound = true
-				}
-				if nodeFound {
 					for _, a := range n.Attr {
 						if a.Key == "content" {
 							//fmt.Println(a)
 							//fileUrl = strings.Replace(a.Val, ".bin", "/file.mp4", 1)
 							fileUrl = a.Val
+							nodeFound = true
 							return
 						}
 					}
@@ -92,15 +87,13 @@ func getFileName(doc *html.Node) string { // url string
 			//fmt.Println(n)
 			for _, a := range n.Attr {
 				if a.Key == "itemprop" && a.Val == "name" {
-					//fmt.Println(a.Val)
+					//fmt.Println(a)
 					//fileName = a.Val
-					nodeFound = true
-				}
-				if nodeFound {
 					for _, a := range n.Attr {
 						if a.Key == "content" {
 							fileName = a.Val
 							//fmt.Println(fileName)
+							nodeFound = true
 							return
 						}
 					}
@@ -116,6 +109,7 @@ func getFileName(doc *html.Node) string { // url string
 	}
 	f(doc)
 
+	//fmt.Println(fileName)
 	return fileName
 }
 
@@ -175,11 +169,12 @@ func main() {
 
 			//fmt.Println(url)
 			file := getFile(url)
+			fmt.Println(file)
 
 			fileId := strings.TrimLeft(file.url, "http://embed.wistia.com/deliveries/")
 			fileId = strings.TrimRight(fileId, "/file.mp4")
 
-			fmt.Println(fileId)
+			//fmt.Println(fileId)
 
 			//wg.Add(1)
 			//go func(url string) {
