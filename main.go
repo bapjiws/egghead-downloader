@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io"
+	//"io"
 	"net/http"
-	"os"
+	//"os"
 	"strings"
 	"sync"
 
@@ -68,8 +68,8 @@ func getFileUrl(url string) string {
 	return strings.Replace(fileUrl, ".bin", "/file.mp4", 1)
 }
 
-func getLessons(url string) []string {
-	var lessons []string
+func getLessonUrls(url string) []string {
+	var lessonUrls []string
 	doc := getDocFromUrl(url)
 
 	var f func(n *html.Node)
@@ -77,9 +77,9 @@ func getLessons(url string) []string {
 		if n.Type == html.ElementNode && n.Data == "a" {
 			//fmt.Println(n)
 			for _, a := range n.Attr {
-				if a.Key == "href" && strings.Index(a.Val, "https://egghead.io/lessons/") != -1 {
+				if a.Key == "href" && strings.Index(a.Val, "https://egghead.io/lessonUrls/") != -1 {
 					//fmt.Println(a)
-					lessons = append(lessons, a.Val)
+					lessonUrls = append(lessonUrls, a.Val)
 				}
 
 			}
@@ -90,7 +90,7 @@ func getLessons(url string) []string {
 	}
 	f(doc)
 
-	return lessons
+	return lessonUrls
 }
 
 // TODO: Check with https://golang.org/doc/articles/race_detector.html
@@ -104,14 +104,14 @@ func main() {
 	//res := string(body)
 	//fmt.Println(res)
 
-	// TODO: create a struct to store url and lesson name (span class="checklist__lessons--title").
+	// TODO: create a struct to store url and lessonUrl name (span class="checklist__lessons--title").
 	fileUrls := map[string]string{}
 
-	lessons := getLessons(courseUrl)
+	lessonUrls := getLessonUrls(courseUrl)
 
 	var wg sync.WaitGroup
 
-	for _, lesson := range lessons {
+	for _, lessonUrl := range lessonUrls {
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
@@ -126,26 +126,26 @@ func main() {
 			if _, ok := fileUrls[fileId]; !ok {
 				fileUrls[fileId] = fileUrl
 
-				wg.Add(1)
-				go func(url string) {
-					defer wg.Done()
-
-					fmt.Printf("Downloading file from %s\n", fileUrl)
-					out, _ := os.Create(fmt.Sprintf("%s.mp4", fileId))
-					defer out.Close()
-
-					/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
-					An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", fileUrl)*/
-					resp, _ := http.Get(fileUrl)
-					defer resp.Body.Close()
-
-					n, _ := io.Copy(out, resp.Body)
-					fmt.Printf("Bytes copied: %d\n", n)
-				}(fileUrl)
+				//wg.Add(1)
+				//go func(url string) {
+				//	defer wg.Done()
+				//
+				//	fmt.Printf("Downloading file from %s\n", fileUrl)
+				//	out, _ := os.Create(fmt.Sprintf("%s.mp4", fileId))
+				//	defer out.Close()
+				//
+				//	/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
+				//	An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", fileUrl)*/
+				//	resp, _ := http.Get(fileUrl)
+				//	defer resp.Body.Close()
+				//
+				//	n, _ := io.Copy(out, resp.Body)
+				//	fmt.Printf("Bytes copied: %d\n", n)
+				//}(fileUrl)
 			}
-		}(lesson)
+		}(lessonUrl)
 	}
 	wg.Wait()
 
-	fmt.Printf("Total lessons downloaded: %d\n", len(fileUrls))
+	fmt.Printf("Total lessonUrls downloaded: %d\n", len(fileUrls))
 }
