@@ -1,15 +1,14 @@
 package main
 
 import (
-	"net/http"
-	//"io/ioutil"
 	"fmt"
-	"golang.org/x/net/html"
+	"io"
+	"net/http"
+	"os"
 	"strings"
 	"sync"
-	//"regexp"
-	"os"
-	"io"
+
+	"golang.org/x/net/html"
 )
 
 // TODO: use os.Args[1:] or, better yet, flags
@@ -38,7 +37,7 @@ func getFileRef(url string) string {
 
 	var f func(n *html.Node)
 	f = func(n *html.Node) {
-		if n.Type == html.ElementNode  && n.Data == "meta"{
+		if n.Type == html.ElementNode && n.Data == "meta" {
 			//fmt.Println(n)
 			for _, a := range n.Attr {
 				if a.Key == "itemprop" && a.Val == "contentURL" {
@@ -48,7 +47,7 @@ func getFileRef(url string) string {
 				}
 				if nodeFound {
 					for _, a := range n.Attr {
-						if a.Key == "content"{
+						if a.Key == "content" {
 							//fmt.Println(a)
 							fileRef = a.Val
 							return
@@ -58,14 +57,15 @@ func getFileRef(url string) string {
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if nodeFound {break}
+			if nodeFound {
+				break
+			}
 			f(c)
 		}
 	}
 	f(doc)
 
-	// Substitute ".bin" with "/file.mp4"
-	return strings.Replace(fileRef,".bin", "/file.mp4", 1)
+	return strings.Replace(fileRef, ".bin", "/file.mp4", 1)
 }
 
 func getLessons(url string) []string {
@@ -74,10 +74,10 @@ func getLessons(url string) []string {
 
 	var f func(n *html.Node)
 	f = func(n *html.Node) {
-		if n.Type == html.ElementNode  && n.Data == "a"{
+		if n.Type == html.ElementNode && n.Data == "a" {
 			//fmt.Println(n)
 			for _, a := range n.Attr {
-				if a.Key == "href" && strings.Index(a.Val, "https://egghead.io/lessons/") != -1{
+				if a.Key == "href" && strings.Index(a.Val, "https://egghead.io/lessons/") != -1 {
 					//fmt.Println(a)
 					lessons = append(lessons, a.Val)
 				}
@@ -108,28 +108,18 @@ func main() {
 	fileRefs := map[string]string{}
 
 	lessons := getLessons(courseUrl)
-	//fmt.Println(lessons[0])
 
 	var wg sync.WaitGroup
 
 	for _, lesson := range lessons {
 		wg.Add(1)
 		go func(url string) {
-			// Decrement the counter when the goroutine completes.
 			defer wg.Done()
 
 			fileRef := getFileRef(url)
-			//fmt.Println(fileRef)
-
-			// See https://golang.org/pkg/regexp/syntax/
-			//re := regexp.MustCompile(`http://embed.wistia.com/deliveries/(?P<fileId>[\d\w]*)/file.mp4`)
-			//fileId := re.FindStringSubmatch(fileRef)[1]
-			// [http://embed.wistia.com/deliveries/b94db68f0d0edbf0ba1568721638473c02df2976/file.mp4 b94db68f0d0edbf0ba1568721638473c02df2976]
-			//fmt.Println(fileId)
 
 			fileId := strings.TrimLeft(fileRef, "http://embed.wistia.com/deliveries/")
 			fileId = strings.TrimRight(fileId, "/file.mp4")
-			//fmt.Println(fileId)
 
 			serviceMu.Lock()
 			defer serviceMu.Unlock()
@@ -137,7 +127,7 @@ func main() {
 				fileRefs[fileId] = fileRef
 
 				wg.Add(1)
-				go func(url string ) {
+				go func(url string) {
 					defer wg.Done()
 
 					fmt.Printf("Downloading file from %s\n", fileRef)
