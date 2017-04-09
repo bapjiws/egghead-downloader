@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	//"io"
 	"net/http"
-	//"os"
 	"strings"
 	"sync"
 
@@ -40,7 +38,7 @@ func getFile(url string) file {
 
 }
 
-func getFileUrl(doc *html.Node) string { // url string
+func getFileUrl(doc *html.Node) string {
 	nodeFound := false
 	fileUrl := ""
 
@@ -54,8 +52,7 @@ func getFileUrl(doc *html.Node) string { // url string
 					for _, a := range n.Attr {
 						if a.Key == "content" {
 							//fmt.Println(a)
-							//fileUrl = strings.Replace(a.Val, ".bin", "/file.mp4", 1)
-							fileUrl = a.Val
+							fileUrl = strings.Replace(a.Val, ".bin", "/file.mp4", 1)
 							nodeFound = true
 							return
 						}
@@ -72,14 +69,12 @@ func getFileUrl(doc *html.Node) string { // url string
 	}
 	f(doc)
 
-	return strings.Replace(fileUrl, ".bin", "/file.mp4", 1)
+	return fileUrl
 }
 
-func getFileName(doc *html.Node) string { // url string
+func getFileName(doc *html.Node) string {
 	fileName := ""
 	nodeFound := false
-	//file := file{}
-	//doc := getDocFromUrl(url)
 
 	var f func(n *html.Node)
 	f = func(n *html.Node) {
@@ -109,7 +104,6 @@ func getFileName(doc *html.Node) string { // url string
 	}
 	f(doc)
 
-	//fmt.Println(fileName)
 	return fileName
 }
 
@@ -123,7 +117,7 @@ func getLessonUrls(courseUrl string) []string {
 		if n.Type == html.ElementNode && n.Data == "a" {
 			//fmt.Println(n)
 			for _, a := range n.Attr {
-				if a.Key == "href" && strings.Index(a.Val, "https://egghead.io/lessons/") != -1 && !lessonIds[a.Val]{
+				if a.Key == "href" && strings.Index(a.Val, "https://egghead.io/lessons/") != -1 && !lessonIds[a.Val] {
 					//fmt.Println(a)
 					lessonIds[a.Val] = true
 					lessonUrls = append(lessonUrls, a.Val)
@@ -147,14 +141,6 @@ type file struct {
 
 // TODO: Check with https://golang.org/doc/articles/race_detector.html
 func main() {
-	// This piece is useful to display the entire html.
-	//body, err := ioutil.ReadAll(response.Body)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//res := string(body)
-	//fmt.Println(res)
 
 	lessonUrls := getLessonUrls(courseUrl)
 	fmt.Println(len(lessonUrls))
@@ -171,15 +157,11 @@ func main() {
 			file := getFile(url)
 			fmt.Println(file)
 
-			fileId := strings.TrimLeft(file.url, "http://embed.wistia.com/deliveries/")
-			fileId = strings.TrimRight(fileId, "/file.mp4")
-
-			//fmt.Println(fileId)
-
 			//wg.Add(1)
 			//go func(url string) {
 			//	defer wg.Done()
 			//
+			//	TODO: handle all the errors below.
 			//	fmt.Printf("Downloading file from %s\n", url)
 			//	out, _ := os.Create(fmt.Sprintf("%s.mp4", fileId))
 			//	defer out.Close()
@@ -196,5 +178,6 @@ func main() {
 	}
 	wg.Wait()
 
+	// TODO: use atomic counter to track the number of downloaded files.
 	//fmt.Printf("Total lessonUrls downloaded: %d\n", len(files))
 }
