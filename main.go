@@ -7,6 +7,8 @@ import (
 	"sync"
 
 	"golang.org/x/net/html"
+	"os"
+	"io"
 )
 
 // TODO: use os.Args[1:] or, better yet, flags
@@ -153,27 +155,27 @@ func main() {
 		go func(url string) {
 			defer wg.Done()
 
-			//fmt.Println(url)
-			file := getFile(url)
-			fmt.Println(file)
+			f := getFile(url)
+			//fmt.Println(file)
 
-			//wg.Add(1)
-			//go func(url string) {
-			//	defer wg.Done()
-			//
-			//	TODO: handle all the errors below.
-			//	fmt.Printf("Downloading file from %s\n", url)
-			//	out, _ := os.Create(fmt.Sprintf("%s.mp4", fileId))
-			//	defer out.Close()
-			//
-			//	/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
-			//	An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", url)*/
-			//	resp, _ := http.Get(url)
-			//	defer resp.Body.Close()
-			//
-			//	n, _ := io.Copy(out, resp.Body)
-			//	fmt.Printf("Bytes copied: %d\n", n)
-			//}(url)
+			wg.Add(1)
+
+			go func(f file) {
+				defer wg.Done()
+				// TODO: handle all the errors below.
+				// TODO: save files in order.
+				fmt.Printf("Downloading file from %s\n", f.url)
+				out, _ := os.Create(fmt.Sprintf("%s.mp4", f.name))
+				defer out.Close()
+
+				/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
+				An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", url)*/
+				resp, _ := http.Get(f.url)
+				defer resp.Body.Close()
+
+				n, _ := io.Copy(out, resp.Body)
+				fmt.Printf("Bytes copied: %d\n", n)
+			}(f)
 		}(lessonUrl)
 	}
 	wg.Wait()
