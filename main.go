@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
 	"golang.org/x/net/html"
-	"os"
-	"io"
 )
 
 // TODO: use os.Args[1:] or, better yet, flags
@@ -29,13 +29,13 @@ func getDocFromUrl(url string) *html.Node {
 	return doc
 }
 
-func getFile(url string) file {
-	doc := getDocFromUrl(url)
+func getFile(l lesson) file {
+	doc := getDocFromUrl(l.url)
 
 	// TODO: Do this inside one func to avoid traversing the doc twice
 	return file{
 		url:  getFileUrl(doc),
-		name: getFileName(doc),
+		name: fmt.Sprintf("%d. %s", l.order, getFileName(doc)), // TODO: improve
 	}
 
 }
@@ -109,10 +109,16 @@ func getFileName(doc *html.Node) string {
 	return fileName
 }
 
-func getLessonUrls(courseUrl string) []string {
+type lesson struct {
+	url   string
+	order int
+}
+
+func getLessonUrls(courseUrl string) []lesson {
 	lessonIds := map[string]bool{}
-	lessonUrls := []string{}
+	lessons := []lesson{}
 	doc := getDocFromUrl(courseUrl)
+	lessonOrder := 1
 
 	var f func(n *html.Node)
 	f = func(n *html.Node) {
@@ -122,7 +128,8 @@ func getLessonUrls(courseUrl string) []string {
 				if a.Key == "href" && strings.Index(a.Val, "https://egghead.io/lessons/") != -1 && !lessonIds[a.Val] {
 					//fmt.Println(a)
 					lessonIds[a.Val] = true
-					lessonUrls = append(lessonUrls, a.Val)
+					lessons = append(lessons, lesson{url: a.Val, order: lessonOrder})
+					lessonOrder++
 				}
 
 			}
@@ -133,7 +140,7 @@ func getLessonUrls(courseUrl string) []string {
 	}
 	f(doc)
 
-	return lessonUrls
+	return lessons
 }
 
 type file struct {
@@ -144,26 +151,25 @@ type file struct {
 // TODO: Check with https://golang.org/doc/articles/race_detector.html
 func main() {
 
-	lessonUrls := getLessonUrls(courseUrl)
-	fmt.Println(len(lessonUrls))
+	ls := getLessonUrls(courseUrl)
+	fmt.Println(len(ls))
 
 	var wg sync.WaitGroup
 
-	// TODO: Use fain-out pattern, i.e., make lessonUrls a channel
-	for _, lessonUrl := range lessonUrls {
+	// TODO: Use fain-out pattern, i.e., make ls a channel
+	for _, l := range ls {
 		wg.Add(1)
-		go func(url string) {
+		go func(l lesson) {
 			defer wg.Done()
 
-			f := getFile(url)
-			//fmt.Println(file)
+			f := getFile(l)
+			fmt.Println(f)
 
 			wg.Add(1)
 
 			go func(f file) {
 				defer wg.Done()
 				// TODO: handle all the errors below.
-				// TODO: save files in order.
 				fmt.Printf("Downloading file from %s\n", f.url)
 				out, _ := os.Create(fmt.Sprintf("%s.mp4", f.name))
 				defer out.Close()
@@ -176,7 +182,7 @@ func main() {
 				n, _ := io.Copy(out, resp.Body)
 				fmt.Printf("Bytes copied: %d\n", n)
 			}(f)
-		}(lessonUrl)
+		}(l)
 	}
 	wg.Wait()
 
