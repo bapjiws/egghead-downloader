@@ -168,7 +168,8 @@ func main() {
 				defer wg.Done()
 				// TODO: handle all the errors below.
 				fmt.Printf("Downloading file from %s\n", f.url)
-				out, _ := os.Create(fmt.Sprintf("%s.mp4", f.name))
+				fileName := fmt.Sprintf("%s.mp4", f.name)
+				out, _ := os.Create(fileName)
 				defer out.Close()
 
 				/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
@@ -176,12 +177,18 @@ func main() {
 				resp, err := http.Get(f.url)
 				// TODO: move this piece of code into a generic checker
 				if err != nil {
-					fmt.Printf("Error: %s\n", err.Error())
+					fmt.Printf("Error: %s. Removing %s\n", err.Error(), fileName)
+					os.Remove(fileName)
 					return
 				}
 				defer resp.Body.Close()
 
-				_, _ = io.Copy(out, resp.Body)
+				_, err = io.Copy(out, resp.Body)
+				if err != nil {
+					fmt.Printf("Error: %s. Removing %s\n", err.Error(), fileName)
+					os.Remove(fileName)
+					return
+				}
 				//fmt.Printf("Bytes copied: %d\n", n)
 			}(f)
 		}(l)
