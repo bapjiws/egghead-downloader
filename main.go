@@ -12,9 +12,12 @@ import (
 	"golang.org/x/net/html"
 )
 
-// TODO: use os.Args[1:] or, better yet, flags
-var courseUrl = "https://egghead.io/courses/introduction-to-reactive-programming" //"https://egghead.io/courses/learn-the-best-and-most-useful-scss"
-var filesDownloaded int32 = 0
+var (
+	// TODO: use os.Args[1:] or, better yet, flags
+	courseUrl             = "https://egghead.io/courses/learn-the-best-and-most-useful-scss" // https://egghead.io/courses/introduction-to-reactive-programming
+	downloadCounter int32 = 0
+	serviceMu       sync.Mutex
+)
 
 func getDocFromUrl(url string) *html.Node {
 	response, err := http.Get(url)
@@ -154,6 +157,8 @@ func main() {
 	ls := make(chan lesson)
 	go getLessonUrls(courseUrl, ls)
 
+	lessonsDownloaded := []string{}
+
 	var wg sync.WaitGroup
 
 	for l := range ls {
@@ -168,8 +173,7 @@ func main() {
 
 			go func(f file) {
 				defer wg.Done()
-				// TODO: handle all the errors below.
-				fmt.Printf("Downloading file from %s\n", f.url)
+				//fmt.Printf("Downloading file from %s\n", f.url)
 				fileName := fmt.Sprintf("%s.mp4", f.name)
 				out, _ := os.Create(fileName)
 				defer out.Close()
@@ -177,9 +181,8 @@ func main() {
 				/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
 				An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", url)*/
 				resp, err := http.Get(f.url)
-				// TODO: move this piece of code into a generic checker
 				if err != nil {
-					fmt.Printf("Error: %s. Removing %s\n", err.Error(), fileName)
+					fmt.Printf("Error: %s. Skipping %s\n", err.Error(), fileName)
 					os.Remove(fileName)
 					return
 				}
@@ -187,17 +190,20 @@ func main() {
 
 				_, err = io.Copy(out, resp.Body)
 				if err != nil {
-					fmt.Printf("Error: %s. Removing %s\n", err.Error(), fileName)
+					fmt.Printf("Error: %s. Skipping %s\n", err.Error(), fileName)
 					os.Remove(fileName)
 					return
 				}
 				//fmt.Printf("Bytes copied: %d\n", n)
 
-				atomic.AddInt32(&filesDownloaded, 1)
+				atomic.AddInt32(&downloadCounter, 1)
+				serviceMu.Lock()
+				defer serviceMu.Unlock()
+				lessonsDownloaded = append(lessonsDownloaded, fileName)
 			}(f)
 		}(l)
 	}
 	wg.Wait()
 
-	fmt.Printf("Total lessons downloaded: %d\n", filesDownloaded)
+	fmt.Printf("\nSuccessfully downloaded %d lessons: %s\n", downloadCounter, lessonsDownloaded)
 }
