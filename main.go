@@ -7,12 +7,14 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"golang.org/x/net/html"
 )
 
 // TODO: use os.Args[1:] or, better yet, flags
 var courseUrl = "https://egghead.io/courses/introduction-to-reactive-programming" //"https://egghead.io/courses/learn-the-best-and-most-useful-scss"
+var filesDownloaded int32 = 0
 
 func getDocFromUrl(url string) *html.Node {
 	response, err := http.Get(url)
@@ -190,11 +192,12 @@ func main() {
 					return
 				}
 				//fmt.Printf("Bytes copied: %d\n", n)
+
+				atomic.AddInt32(&filesDownloaded, 1)
 			}(f)
 		}(l)
 	}
 	wg.Wait()
 
-	// TODO: use atomic counter to track the number of downloaded files.
-	//fmt.Printf("Total lessonUrls downloaded: %d\n", len(files))
+	fmt.Printf("Total lessons downloaded: %d\n", filesDownloaded)
 }
