@@ -12,7 +12,7 @@ import (
 )
 
 // TODO: use os.Args[1:] or, better yet, flags
-var courseUrl = "https://egghead.io/courses/learn-the-best-and-most-useful-scss"
+var courseUrl = "https://egghead.io/courses/introduction-to-reactive-programming" //"https://egghead.io/courses/learn-the-best-and-most-useful-scss"
 
 func getDocFromUrl(url string) *html.Node {
 	response, err := http.Get(url)
@@ -160,7 +160,7 @@ func main() {
 			defer wg.Done()
 
 			f := getFile(l)
-			fmt.Println(f)
+			//fmt.Println(f)
 
 			wg.Add(1)
 
@@ -173,7 +173,12 @@ func main() {
 
 				/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
 				An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", url)*/
-				resp, _ := http.Get(f.url)
+				resp, err := http.Get(f.url)
+				// TODO: move this piece of code into a generic checker
+				if err != nil {
+					fmt.Printf("Error: %s\n", err.Error())
+					return
+				}
 				defer resp.Body.Close()
 
 				_, _ = io.Copy(out, resp.Body)
