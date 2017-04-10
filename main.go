@@ -170,7 +170,7 @@ func main() {
 			//fmt.Println(f)
 
 			wg.Add(1)
-
+			// TODO: use progress bar to visualize downloading? Check this one out: https://github.com/cheggaaa/pb.
 			go func(f file) {
 				defer wg.Done()
 				//fmt.Printf("Downloading file from %s\n", f.url)
@@ -194,7 +194,8 @@ func main() {
 					os.Remove(fileName)
 					return
 				}
-				//fmt.Printf("Bytes copied: %d\n", n)
+				// TODO: track and display file sizes in MBs (maybe display total as well).
+				//fmt.Printf("Byte s copied: %d\n", n)
 
 				atomic.AddInt32(&downloadCounter, 1)
 				serviceMu.Lock()
@@ -205,5 +206,6 @@ func main() {
 	}
 	wg.Wait()
 
+	// TODO: sort lessonsDownloaded beforehand and print 'em out using a for loop.
 	fmt.Printf("\nSuccessfully downloaded %d lessons: %s\n", downloadCounter, lessonsDownloaded)
 }
