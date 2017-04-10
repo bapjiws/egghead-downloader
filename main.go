@@ -114,9 +114,8 @@ type lesson struct {
 	order int
 }
 
-func getLessonUrls(courseUrl string) []lesson {
+func getLessonUrls(courseUrl string, lessons chan lesson) {
 	lessonIds := map[string]bool{}
-	lessons := []lesson{}
 	doc := getDocFromUrl(courseUrl)
 	lessonOrder := 1
 
@@ -128,10 +127,9 @@ func getLessonUrls(courseUrl string) []lesson {
 				if a.Key == "href" && strings.Index(a.Val, "https://egghead.io/lessons/") != -1 && !lessonIds[a.Val] {
 					//fmt.Println(a)
 					lessonIds[a.Val] = true
-					lessons = append(lessons, lesson{url: a.Val, order: lessonOrder})
+					lessons <- lesson{url: a.Val, order: lessonOrder}
 					lessonOrder++
 				}
-
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
@@ -140,7 +138,7 @@ func getLessonUrls(courseUrl string) []lesson {
 	}
 	f(doc)
 
-	return lessons
+	close(lessons)
 }
 
 type file struct {
@@ -150,14 +148,13 @@ type file struct {
 
 // TODO: Check with https://golang.org/doc/articles/race_detector.html
 func main() {
-
-	ls := getLessonUrls(courseUrl)
-	fmt.Println(len(ls))
+	// Pattern taken from: https://tour.golang.org/concurrency/4
+	ls := make(chan lesson)
+	go getLessonUrls(courseUrl, ls)
 
 	var wg sync.WaitGroup
 
-	// TODO: Use fain-out pattern, i.e., make ls a channel
-	for _, l := range ls {
+	for l := range ls {
 		wg.Add(1)
 		go func(l lesson) {
 			defer wg.Done()
@@ -179,8 +176,8 @@ func main() {
 				resp, _ := http.Get(f.url)
 				defer resp.Body.Close()
 
-				n, _ := io.Copy(out, resp.Body)
-				fmt.Printf("Bytes copied: %d\n", n)
+				_, _ = io.Copy(out, resp.Body)
+				//fmt.Printf("Bytes copied: %d\n", n)
 			}(f)
 		}(l)
 	}
