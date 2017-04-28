@@ -37,17 +37,17 @@ func getDocFromUrl(url string) *html.Node {
 func getFile(l lesson) file {
 	doc := getDocFromUrl(l.url)
 
-	// TODO: Do this inside one func to avoid traversing the doc twice
+	fileUrl, fileName := getFileData(l, doc)
 	return file{
-		url:  getFileUrl(doc),
-		name: getFileName(l.order, doc),
+		url:  fileUrl,
+		name: fileName,
 	}
 
 }
 
-func getFileUrl(doc *html.Node) string {
-	nodeFound := false
-	fileUrl := ""
+func getFileData(l lesson, doc *html.Node) (string, string) {
+	nodeWithFileUrlFound, nodeWithFileNameFound := false, false
+	fileUrl, fileName := "", ""
 
 	var f func(n *html.Node)
 	f = func(n *html.Node) {
@@ -60,42 +60,20 @@ func getFileUrl(doc *html.Node) string {
 						if a.Key == "content" {
 							//fmt.Println(a)
 							fileUrl = strings.Replace(a.Val, ".bin", "/file.mp4", 1)
-							nodeFound = true
+							nodeWithFileUrlFound = true
 							return
 						}
 					}
 				}
-			}
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if nodeFound {
-				break
-			}
-			f(c)
-		}
-	}
-	f(doc)
-
-	return fileUrl
-}
-
-func getFileName(order int, doc *html.Node) string {
-	fileName := ""
-	nodeFound := false
-
-	var f func(n *html.Node)
-	f = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "meta" {
-			//fmt.Println(n)
-			for _, a := range n.Attr {
 				if a.Key == "itemprop" && a.Val == "name" {
 					//fmt.Println(a)
 					//fileName = a.Val
 					for _, a := range n.Attr {
-						if a.Key == "content" {
-							fileName = a.Val
+						if a.Key == "content" && strings.Index(a.Val, ".mp4") == - 1{
+							//fmt.Println(a)
+							fileName = fmt.Sprintf("%d. %s", l.order, a.Val)
 							//fmt.Println(fileName)
-							nodeFound = true
+							nodeWithFileNameFound = true
 							return
 						}
 					}
@@ -103,7 +81,7 @@ func getFileName(order int, doc *html.Node) string {
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if nodeFound {
+			if nodeWithFileUrlFound && nodeWithFileNameFound{
 				break
 			}
 			f(c)
@@ -111,7 +89,10 @@ func getFileName(order int, doc *html.Node) string {
 	}
 	f(doc)
 
-	return fmt.Sprintf("%d. %s", order, fileName)
+	fmt.Println("fileUrl: ", fileUrl)
+	fmt.Println("fileName: ", fileName)
+
+	return fileUrl, fileName
 }
 
 type lesson struct {
