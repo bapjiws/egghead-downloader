@@ -40,7 +40,7 @@ func getFile(l lesson) file {
 	// TODO: Do this inside one func to avoid traversing the doc twice
 	return file{
 		url:  getFileUrl(doc),
-		name: fmt.Sprintf("%d. %s", l.order, getFileName(doc)), // TODO: improve
+		name: getFileName(l.order, doc),
 	}
 
 }
@@ -79,7 +79,7 @@ func getFileUrl(doc *html.Node) string {
 	return fileUrl
 }
 
-func getFileName(doc *html.Node) string {
+func getFileName(order int, doc *html.Node) string {
 	fileName := ""
 	nodeFound := false
 
@@ -111,7 +111,7 @@ func getFileName(doc *html.Node) string {
 	}
 	f(doc)
 
-	return fileName
+	return fmt.Sprintf("%d. %s", order, fileName)
 }
 
 type lesson struct {
