@@ -37,15 +37,6 @@ func getDocFromUrl(url string) *html.Node {
 func getFile(l lesson) file {
 	doc := getDocFromUrl(l.url)
 
-	fileUrl, fileName := getFileData(l, doc)
-	return file{
-		url:  fileUrl,
-		name: fileName,
-	}
-
-}
-
-func getFileData(l lesson, doc *html.Node) (string, string) {
 	nodeWithFileUrlFound, nodeWithFileNameFound := false, false
 	fileUrl, fileName := "", ""
 
@@ -69,7 +60,7 @@ func getFileData(l lesson, doc *html.Node) (string, string) {
 					//fmt.Println(a)
 					//fileName = a.Val
 					for _, a := range n.Attr {
-						if a.Key == "content" && strings.Index(a.Val, ".mp4") == - 1{
+						if a.Key == "content" && strings.Index(a.Val, ".mp4") == -1 {
 							//fmt.Println(a)
 							fileName = fmt.Sprintf("%d. %s", l.order, a.Val)
 							//fmt.Println(fileName)
@@ -81,7 +72,7 @@ func getFileData(l lesson, doc *html.Node) (string, string) {
 			}
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if nodeWithFileUrlFound && nodeWithFileNameFound{
+			if nodeWithFileUrlFound && nodeWithFileNameFound {
 				break
 			}
 			f(c)
@@ -92,7 +83,11 @@ func getFileData(l lesson, doc *html.Node) (string, string) {
 	fmt.Println("fileUrl: ", fileUrl)
 	fmt.Println("fileName: ", fileName)
 
-	return fileUrl, fileName
+	return file{
+		url:  fileUrl,
+		name: fileName,
+	}
+
 }
 
 type lesson struct {
