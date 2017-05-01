@@ -143,41 +143,36 @@ func main() {
 			defer wg.Done()
 
 			f := getFile(l)
-			//fmt.Println(f)
 
-			wg.Add(1)
 			// TODO: use progress bar to visualize downloading? Check this one out: https://github.com/cheggaaa/pb.
-			go func(f file) {
-				defer wg.Done()
-				//fmt.Printf("Downloading file from %s\n", f.url)
-				fileName := fmt.Sprintf("%s.mp4", f.name)
-				out, _ := os.Create(fileName)
-				defer out.Close()
+			//fmt.Printf("Downloading file from %s\n", f.url)
+			fileName := fmt.Sprintf("%s.mp4", f.name)
+			out, _ := os.Create(fileName)
+			defer out.Close()
 
-				/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
-				An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", url)*/
-				resp, err := http.Get(f.url)
-				if err != nil {
-					fmt.Printf("Error: %s. Skipping %s\n", err.Error(), fileName)
-					os.Remove(fileName)
-					return
-				}
-				defer resp.Body.Close()
+			/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
+			An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", url)*/
+			resp, err := http.Get(f.url)
+			if err != nil {
+				fmt.Printf("Error: %s. Skipping %s\n", err.Error(), fileName)
+				os.Remove(fileName)
+				return
+			}
+			defer resp.Body.Close()
 
-				_, err = io.Copy(out, resp.Body)
-				if err != nil {
-					fmt.Printf("Error: %s. Skipping %s\n", err.Error(), fileName)
-					os.Remove(fileName)
-					return
-				}
-				// TODO: track and display file sizes in MBs (maybe display total as well).
-				//fmt.Printf("Byte s copied: %d\n", n)
+			_, err = io.Copy(out, resp.Body)
+			if err != nil {
+				fmt.Printf("Error: %s. Skipping %s\n", err.Error(), fileName)
+				os.Remove(fileName)
+				return
+			}
+			// TODO: track and display file sizes in MBs (maybe display total as well).
+			//fmt.Printf("Byte s copied: %d\n", n)
 
-				atomic.AddInt32(&downloadCounter, 1)
-				serviceMu.Lock()
-				defer serviceMu.Unlock()
-				lessonsDownloaded = append(lessonsDownloaded, fileName)
-			}(f)
+			atomic.AddInt32(&downloadCounter, 1)
+			serviceMu.Lock()
+			defer serviceMu.Unlock()
+			lessonsDownloaded = append(lessonsDownloaded, fileName)
 		}(l)
 	}
 	wg.Wait()
