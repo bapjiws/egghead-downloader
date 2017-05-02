@@ -144,7 +144,7 @@ func main() {
 
 			f := getFile(l)
 
-			// TODO: use progress bar to visualize downloading? Check this one out: https://github.com/cheggaaa/pb.
+			// TODO: use progress bar: https://github.com/gosuri/uiprogress
 			//fmt.Printf("Downloading file from %s\n", f.url)
 			fileName := fmt.Sprintf("%s.mp4", f.name)
 			out, _ := os.Create(fileName)
@@ -160,6 +160,8 @@ func main() {
 			}
 			defer resp.Body.Close()
 
+			// TODO: check https://stackoverflow.com/questions/22421375/how-to-print-the-bytes-while-the-file-is-being-downloaded-golang
+			// TODO: use ProxyReader from https://github.com/cheggaaa/pb
 			_, err = io.Copy(out, resp.Body)
 			if err != nil {
 				fmt.Printf("Error: %s. Skipping %s\n", err.Error(), fileName)
