@@ -15,8 +15,8 @@ import (
 
 var (
 	// TODO: use os.Args[1:] or, better yet, flags
-	//courseUrl             = "https://egghead.io/courses/introduction-to-reactive-programming"
-	courseUrl             = "https://egghead.io/courses/learn-the-best-and-most-useful-scss"
+	courseUrl             = "https://egghead.io/courses/introduction-to-reactive-programming"
+	//courseUrl             = "https://egghead.io/courses/learn-the-best-and-most-useful-scss"
 	downloadCounter int32 = 0
 	serviceMu       sync.Mutex
 )
@@ -169,8 +169,6 @@ func main() {
 		go func(l lesson) {
 			defer wg.Done()
 
-			fmt.Println("Lesson: ", l.order)
-
 			f := getFile(l)
 
 			//fmt.Printf("Downloading file from %s\n", f.url)
@@ -204,9 +202,9 @@ func main() {
 				return
 			}
 			// TODO: track and display file sizes in MBs (maybe display total as well).
-			//fmt.Printf("Byte s copied: %d\n", n)
 
 			atomic.AddInt32(&downloadCounter, 1)
+
 			serviceMu.Lock()
 			defer serviceMu.Unlock()
 			lessonsDownloaded = append(lessonsDownloaded, fileName)
@@ -214,8 +212,8 @@ func main() {
 	}
 	wg.Wait()
 
-	//uiprogress.Stop()
+	uiprogress.Stop()
 
-	// TODO: sort lessonsDownloaded beforehand and print 'em out using a for loop.
+	// TODO: sort lessonsDownloaded before printing.
 	fmt.Printf("\nSuccessfully downloaded %d lessons: %s\n", downloadCounter, lessonsDownloaded)
 }
