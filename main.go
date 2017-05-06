@@ -9,12 +9,14 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/gosuri/uiprogress"
 	"golang.org/x/net/html"
 )
 
 var (
 	// TODO: use os.Args[1:] or, better yet, flags
-	courseUrl             = "https://egghead.io/courses/learn-the-best-and-most-useful-scss" // https://egghead.io/courses/introduction-to-reactive-programming
+	//courseUrl             = "https://egghead.io/courses/introduction-to-reactive-programming"
+	courseUrl             = "https://egghead.io/courses/learn-the-best-and-most-useful-scss"
 	downloadCounter int32 = 0
 	serviceMu       sync.Mutex
 )
@@ -80,8 +82,8 @@ func getFile(l lesson) file {
 	}
 	f(doc)
 
-	fmt.Println("fileUrl: ", fileUrl)
-	fmt.Println("fileName: ", fileName)
+	//fmt.Println("fileUrl: ", fileUrl)
+	//fmt.Println("fileName: ", fileName)
 
 	return file{
 		url:  fileUrl,
@@ -127,6 +129,30 @@ type file struct {
 	name string
 }
 
+// ProxyReader is inspired by: https://github.com/cheggaaa/pb
+// Also see: https://stackoverflow.com/questions/22421375/how-to-print-the-bytes-while-the-file-is-being-downloaded-golang
+type ProxyReader struct {
+	io.Reader
+	bar   *uiprogress.Bar
+	total int
+}
+
+func (pr *ProxyReader) Read(p []byte) (int, error) {
+	n, err := pr.Reader.Read(p)
+
+	//serviceMu.Lock()
+	//defer serviceMu.Unlock()
+	//pr.bar.Total += n
+	pr.total += n
+	pr.bar.Set(pr.total)
+
+	//if err == nil {
+	//	fmt.Printf("Read %d bytes for a total of %d; %s complete\n", n, pr.bar.Total, pr.bar.CompletedPercentString())
+	//}
+
+	return n, err
+}
+
 // TODO: Check with https://golang.org/doc/articles/race_detector.html
 func main() {
 	// Pattern taken from: https://tour.golang.org/concurrency/4
@@ -136,15 +162,17 @@ func main() {
 	lessonsDownloaded := []string{}
 
 	var wg sync.WaitGroup
+	uiprogress.Start()
 
 	for l := range ls {
 		wg.Add(1)
 		go func(l lesson) {
 			defer wg.Done()
 
+			fmt.Println("Lesson: ", l.order)
+
 			f := getFile(l)
 
-			// TODO: use progress bar: https://github.com/gosuri/uiprogress
 			//fmt.Printf("Downloading file from %s\n", f.url)
 			fileName := fmt.Sprintf("%s.mp4", f.name)
 			out, _ := os.Create(fileName)
@@ -153,18 +181,25 @@ func main() {
 			/*Right now using https://embedwistia-a.akamaihd.net/deliveries/<file_id>/file.mp4.
 			An alternative: fmt.Sprintf("https://embed-ssl.wistia.com/deliveries/%s/file.mp4", url)*/
 			resp, err := http.Get(f.url)
+
 			if err != nil {
-				fmt.Printf("Error: %s. Skipping %s\n", err.Error(), fileName)
+				//fmt.Printf("Error: %s. Skipping %s\n", err.Error(), fileName)
 				os.Remove(fileName)
 				return
 			}
 			defer resp.Body.Close()
 
-			// TODO: check https://stackoverflow.com/questions/22421375/how-to-print-the-bytes-while-the-file-is-being-downloaded-golang
-			// TODO: use ProxyReader from https://github.com/cheggaaa/pb
-			_, err = io.Copy(out, resp.Body)
+			fmt.Printf("Lesson %d, length is %d MB\n", l.order, resp.ContentLength/1000000) // 1048576)
+
+			bar := uiprogress.AddBar(int(resp.ContentLength)).AppendCompleted().PrependElapsed()
+			bar.PrependFunc(func(b *uiprogress.Bar) string {
+				return fmt.Sprintf("Lesson %d: %d our of %d", l.order, b.Current(), b.Total)
+			})
+			proxyReader := &ProxyReader{Reader: resp.Body, bar: bar}
+
+			_, err = io.Copy(out, proxyReader)
 			if err != nil {
-				fmt.Printf("Error: %s. Skipping %s\n", err.Error(), fileName)
+				//fmt.Printf("Error: %s. Skipping %s\n", err.Error(), fileName)
 				os.Remove(fileName)
 				return
 			}
@@ -178,6 +213,8 @@ func main() {
 		}(l)
 	}
 	wg.Wait()
+
+	//uiprogress.Stop()
 
 	// TODO: sort lessonsDownloaded beforehand and print 'em out using a for loop.
 	fmt.Printf("\nSuccessfully downloaded %d lessons: %s\n", downloadCounter, lessonsDownloaded)
