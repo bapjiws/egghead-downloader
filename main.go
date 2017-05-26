@@ -13,6 +13,8 @@ import (
 	"golang.org/x/net/html"
 )
 
+// TODO: check https://www.npmjs.com/package/egghead-downloader
+
 var (
 	// TODO: use os.Args[1:] or, better yet, flags
 	courseUrl             = "https://egghead.io/courses/introduction-to-reactive-programming"
